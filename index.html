@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chennai Air Quality Monitor</title>
+
+  <!-- Fonts and Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- ECharts -->
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+
+  <style>
+    :root {
+      --primary-blue: #007aff;
+      --dark-blue: #0051a8;
+      --glass-bg: rgba(255, 255, 255, 0.12);
+      --glass-border: rgba(255, 255, 255, 0.22);
+      --shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+      --card-radius: 18px;
+      --text-weak: rgba(255,255,255,0.85);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Poppins', sans-serif; }
+
+    body {
+      background: url('download.jfif') no-repeat center center fixed;
+      background-size: cover;
+      color: var(--text-weak);
+      min-height: 100vh;
+      padding: 1rem;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before{
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 10% 10%, rgba(255,255,255,0.08), transparent 25%),
+                  radial-gradient(circle at 90% 90%, rgba(0,0,0,0.35), transparent 40%);
+      z-index: 0;
+    }
+
+    .container { max-width: 1200px; margin: auto; position: relative; z-index: 2; }
+
+    header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1.25rem 0; margin-bottom: 1.25rem;
+      color: #000;
+    }
+
+    .page-title {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-size: 1.6rem; font-weight: 700; color: #000;
+    }
+    .page-title i { color: #000; }
+
+    .page-subtitle { color: rgba(0,0,0,0.6); margin-top: 0.25rem; font-size: 0.95rem; }
+
+    .locations-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .location-card {
+      background: var(--glass-bg);
+      border-radius: var(--card-radius);
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      color: white;
+      position: relative;
+      transition: transform .25s ease, box-shadow .25s ease;
+      overflow: hidden;
+      min-height: 140px;
+    }
+    .location-card:hover{
+      transform: translateY(-6px);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+    }
+
+    .map-marker { position: absolute; top: 0.9rem; right: 0.9rem; color: rgba(255,255,255,0.9); font-size: 1.1rem; }
+
+    .location-header { display:flex; justify-content: space-between; align-items:center; margin-bottom: 0.6rem; }
+    .location-name { font-size: 1.05rem; color: #fff; font-weight: 600; }
+
+    .aqi-value { font-size: 1rem; font-weight: 700; padding: 0.25rem 0.6rem; border-radius: 16px; color: #fff; }
+
+    .aqi-good { background: #4cd964; color: #072; }
+    .aqi-moderate { background: #ffcc00; color: #111; }
+    .aqi-unhealthy { background: #ff3b30; }
+    .aqi-very-unhealthy { background: #8f3f97; }
+    .aqi-hazardous { background: #7e0023; }
+
+    .metric-row { display:flex; justify-content: space-between; margin: 0.35rem 0; color: rgba(255,255,255,0.95); font-size: 0.95rem; }
+
+    .btn-details{
+      width:100%; padding: 0.5rem 0.75rem; margin-top: 0.6rem;
+      background: linear-gradient(90deg, rgba(0,122,255,0.85), rgba(0,90,200,0.9));
+      border: none; border-radius: 10px; color: #fff; cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0,122,255,0.18);
+      font-weight:600;
+    }
+
+    .chart-container {
+      background: rgba(6,6,6,0.45);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow);
+      border: 1px solid rgba(255,255,255,0.16);
+      backdrop-filter: blur(22px) saturate(160%);
+      color: #fff;
+      margin-top: 0.5rem;
+    }
+
+    .chart-title { margin: 0 0 0.75rem 0; font-size: 1.05rem; color: #fff; font-weight:700; }
+
+    .details-section {
+      display: none;
+      flex-direction: column;
+      background: var(--glass-bg);
+      padding: 1.25rem;
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--glass-border);
+      backdrop-filter: blur(18px);
+      color: #fff;
+      margin-top: 1rem;
+    }
+
+    .back-btn{
+      background: transparent; border: 1px solid rgba(255,255,255,0.12);
+      color: #fff; padding: 0.5rem 0.75rem; border-radius: 10px; cursor: pointer;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1 class="page-title"><i class="fas fa-globe-asia"></i> Chennai Air Quality Monitoring</h1>
+        <p class="page-subtitle" id="page-subtitle">Overview of current AQI, PM, and CO₂ levels</p>
+      </div>
+    </header>
+
+    <section id="overview">
+      <div class="locations-grid" id="data-container"></div>
+
+      <div class="chart-container">
+        <h3 class="chart-title">Chennai Pollution Comparison</h3>
+        <div id="comparison-chart" style="width:100%;height:320px;"></div>
+      </div>
+    </section>
+
+    <section id="details" class="details-section">
+      <button class="back-btn" onclick="showOverview()"><i class="fas fa-arrow-left"></i> Back</button>
+      <h3 id="details-title"></h3>
+      <div id="details-content"></div>
+      <div id="location-chart" style="width:100%;height:320px;margin-top:0.75rem;"></div>
+    </section>
+
+    <footer>&copy; 2025 Chennai Air Quality Monitoring Network</footer>
+  </div>
+
+  <script>
+    const locationsRaw = [
+      { id: "easwari", name: "Easwari Engineering College", pm25: 50, pm10: 80, co2: 500, comment: "Traffic & local activities contributing to PM levels." },
+      { id: "dlf", name: "DLF IT Park, Manapakkam", pm25: 40, pm10: 70, co2: 510, comment: "Commercial area, steady vehicular flow." },
+      { id: "porur", name: "Porur – Ram Nagar", pm25: 35, pm10: 65, co2: 490, comment: "Residential zone with moderate PM." },
+      { id: "kk", name: "KK Nagar", pm25: 50, pm10: 75, co2: 530, comment: "Busy residential area with mixed traffic." },
+      { id: "lic", name: "LIC Area", pm25: 60, pm10: 95, co2: 540, comment: "Higher PM levels, likely dust & emissions." }
+    ];
+
+    function approxAQI(pm25){ return Math.round(pm25 * 3); }
+
+    function getAQIClass(aqi){
+      if(aqi <= 50) return "aqi-good";
+      if(aqi <= 100) return "aqi-moderate";
+      if(aqi <= 150) return "aqi-unhealthy";
+      if(aqi <= 200) return "aqi-very-unhealthy";
+      return "aqi-hazardous";
+    }
+
+    const container = document.getElementById("data-container");
+    const labels = [], pm25Data = [], pm10Data = [], co2Data = [];
+
+    const locations = locationsRaw.map(l => ({ ...l, aqi: approxAQI(l.pm25) }));
+
+    locations.forEach(loc => {
+      const card = document.createElement("div");
+      card.className = "location-card";
+      const aqiClass = getAQIClass(loc.aqi);
+      card.innerHTML = `
+        <i class="fas fa-map-marker-alt map-marker"></i>
+        <div class="location-header">
+          <div class="location-name">${loc.name}</div>
+          <div class="aqi-value ${aqiClass}">${loc.aqi}</div>
+        </div>
+        <div class="metric-row"><span>PM₂.₅:</span><span>${loc.pm25} µg/m³</span></div>
+        <div class="metric-row"><span>PM₁₀:</span><span>${loc.pm10} µg/m³</span></div>
+        <div class="metric-row"><span>CO₂:</span><span>${loc.co2} ppm</span></div>
+        <button class="btn-details" onclick="showDetails('${loc.id}')">View Details</button>
+      `;
+      container.appendChild(card);
+
+      labels.push(loc.name);
+      pm25Data.push(loc.pm25);
+      pm10Data.push(loc.pm10);
+      co2Data.push(loc.co2);
+    });
+
+    const chart = echarts.init(document.getElementById('comparison-chart'));
+    chart.setOption({
+      backgroundColor: 'transparent',
+      tooltip: { trigger: 'axis' },
+      legend: { data: ['PM₂.₅','PM₁₀','CO₂'], bottom: 6, textStyle: { color: '#fff' } },
+      xAxis: { type: 'category', data: labels, axisLabel: { color: '#fff' } },
+      yAxis: { type: 'value', axisLabel: { color: '#fff' } },
+      series: [
+        { name:'PM₂.₅', type:'bar', data: pm25Data, color: '#4e79a7' },
+        { name:'PM₁₀', type:'bar', data: pm10Data, color: '#f28e2c' },
+        { name:'CO₂', type:'line', data: co2Data, color: '#e15759', smooth: true }
+      ]
+    });
+
+    function showDetails(id){
+      const loc = locations.find(l => l.id === id);
+      document.getElementById('overview').style.display = 'none';
+
+      const details = document.getElementById('details');
+      details.style.display = 'flex';
+
+      document.getElementById('details-title').textContent = loc.name;
+      document.getElementById('details-content').innerHTML = `
+        <p><strong>AQI:</strong> ${loc.aqi}</p>
+        <p><strong>PM₂.₅:</strong> ${loc.pm25} µg/m³</p>
+        <p><strong>PM₁₀:</strong> ${loc.pm10} µg/m³</p>
+        <p><strong>CO₂:</strong> ${loc.co2} ppm</p>
+        <p><em>${loc.comment}</em></p>
+      `;
+
+      const locChart = echarts.init(document.getElementById('location-chart'));
+      locChart.setOption({
+        backgroundColor: 'transparent',
+        tooltip: { trigger: 'axis' },
+        xAxis: { type:'category', data:['PM₂.₅','PM₁₀','CO₂'], axisLabel:{color:"#fff"} },
+        yAxis: { type:'value', axisLabel:{color:"#fff"} },
+        series: [{
+          type:'bar',
+          data: [loc.pm25, loc.pm10, loc.co2],
+          itemStyle:{ color:(p)=>['#4e79a7','#f28e2c','#e15759'][p.dataIndex] }
+        }]
+      });
+    }
+
+    function showOverview(){
+      document.getElementById('overview').style.display = 'block';
+      document.getElementById('details').style.display = 'none';
+    }
+  </script>
+</body>
+</html>
